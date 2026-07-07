@@ -1,0 +1,8 @@
+flask
+flask-apscheduler
+python-dotenv
+requests
+cx_Oracle
+pandas
+numpy
+scikit-learn

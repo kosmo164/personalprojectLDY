@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>personalprojectLDY · 주가 예측 대시보드</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <div id="toast-wrap"></div>
+
+    <!-- 시그니처 요소: 상단 티커 테이프 -->
+    <div class="ticker-tape">
+        <div class="ticker-track" id="ticker-track"></div>
+    </div>
+
+    <div class="wrap">
+        <header class="masthead">
+            <div>
+                <div class="brand-eyebrow"><span class="live-dot"></span> AI 기반 3·6·12개월 주가 예측</div>
+                <h1 class="brand-title">personal<em>project</em>LDY</h1>
+            </div>
+            <div class="masthead-controls">
+                <input type="text" id="search-code" value="005930" placeholder="종목코드 (예: 005930)">
+                <button class="btn btn-brass" onclick="loadStockData()">조회</button>
+            </div>
+        </header>
+
+        <div id="quick-picks"></div>
+
+        <div class="grid">
+            <div class="col-stack">
+                <div class="card">
+                    <h3>종목 분석 핵심 지표</h3>
+                    <div class="metric-row">
+                        <span class="metric-label">현재 종가</span>
+                        <span id="current-price" class="metric-value">- 원</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">20일 이동평균선</span>
+                        <span id="ma-status" class="metric-value brass">-</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">볼린저 밴드 상한</span>
+                        <span id="bb-up-status" class="metric-value gain">-</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">볼린저 밴드 하한</span>
+                        <span id="bb-down-status" class="metric-value loss">-</span>
+                    </div>
+                </div>
+
+                <div class="card auto-update-card">
+                    <h3>주기적 예측 업데이트</h3>
+                    <p class="headline">매일 장 마감 후 자동 갱신</p>
+                    <p class="sub" id="base-date">기준일자: -</p>
+                    <div class="rule"></div>
+                </div>
+
+                <div class="card">
+                    <h3>초기 데이터 적재</h3>
+                    <p class="helptext">DB가 비어있다면 관심종목의 과거 시세를 한 번에 채워보세요. (키움 REST API 일봉차트)</p>
+                    <button id="backfill-btn" class="btn btn-outline" style="width:100%" onclick="startBackfill()">적재 시작</button>
+                    <div id="backfill-progress-wrap" class="progress-wrap hidden" style="margin-top:1rem;">
+                        <div class="progress-labels">
+                            <span id="backfill-label">대기 중...</span>
+                            <span id="backfill-pct">0%</span>
+                        </div>
+                        <div class="progress-track">
+                            <div id="backfill-fill" class="progress-fill"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card chart-card">
+                <div class="chart-card-head">
+                    <div>
+                        <div class="chart-eyebrow">예측 모니터링</div>
+                        <h2 id="stock-title">종목을 조회해 주세요</h2>
+                    </div>
+                </div>
+
+                <div class="chart-canvas-wrap">
+                    <canvas id="stockChart"></canvas>
+                    <div id="empty-state" class="hidden">
+                        <div class="glyph">—</div>
+                        <p class="title">아직 이 종목의 데이터가 없습니다</p>
+                        <p class="sub">왼쪽의 "초기 데이터 적재"로 과거 시세를 먼저 채워주세요.</p>
+                        <button class="btn btn-brass" onclick="startBackfill()">지금 적재 시작</button>
+                    </div>
+                </div>
+
+                <div class="predictions-row">
+                    <div class="prediction-cell">
+                        <div class="p-label">3개월 뒤 예측</div>
+                        <div id="pred-3m" class="p-value">-</div>
+                    </div>
+                    <div class="prediction-cell">
+                        <div class="p-label">6개월 뒤 예측</div>
+                        <div id="pred-6m" class="p-value">-</div>
+                    </div>
+                    <div class="prediction-cell">
+                        <div class="p-label">12개월 뒤 예측</div>
+                        <div id="pred-12m" class="p-value">-</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
