@@ -1,6 +1,51 @@
+'''
+역할 : 파이썬의 대표적인 데이터 분석 라이브러리인 Pandas를 가져옴. 보통 관례상 pd라는 
+    축약어 사용.
+코드 내 사용성 : 이 코드에서는 DB에서 가져온 주가 데이터를 표(테이블)형태의 객체인
+    DataFrame으로 다룸. df.empty로 데이터가 비어있는지 확인하거나, pd.isna(v) 및
+    pd.notnull(df)를 사용해 데이터의 구멍(결측치,NaN)을 체크하고 처리할때 사용.    
+'''
 import pandas as pd
+'''
+역할 : 웹 서버를 구축하기 위한 프레임워크인 Flask에서 핵심기능 3가지를 가져옴
+- Blueprint : URL경로를 모듈화하여 관리하는 도구. 여기서는 대시보드 관련 주소들을 /api
+    라는 그룹으로 묶는 역할을 함
+- jsonify : 파이썬의 딕셔너리나 리스트 데이터를 웹브라우저(클라이언트)가 이해항 수 있는
+    JSON형식의 응답 객체로 변환해줌
+- request : 사용자가 보낸 HTTP요청 정보(URL파라미터, POST로 보낸 JSON본문 등)에 
+    접근할 수 있게 해주는 객체. request.get_json()이나 request.args.get()형태로 사용.        
+'''
 from flask import Blueprint, jsonify, request
 
+'''
+프로젝트 내부모듈임포트(아키텍처구조)
+- 직접 작성한 내부 소스코드 파일들(app/폴더 안의 모듈들)을 가져오는 부분
+1. 설정관리(from app.config import config)
+ - 역할 : 데이터베이스 젒고 정보,API키, 혹은 코드 내에서 사용된 config.DEFAULT_CODES
+    (기본종목세트)와 같은 전역설정값들을 모아둔 객체. 시스템의 환경 변수나 공통 옵션을 안정
+    하게 관리하기 위해 분리해 준 것임.
+2. 데이터베이스접근(from app.db import repository)
+ - 역할 : 리포지토리패턴(Repository Pattern)이 적용된 모듈. 실제 데이터베이스(OracleDB)
+    에 SQL쿼리를 보내 데이터를 넣고 빼는 복잡한 로직을 이 repository내부에 숨겨둠
+ - 코드 내 사용성 : API라우터는 SQL을 직접 알 필요없이 repository.get_watchlist(),
+    repository.get_latest_snapshot(srtn_cd) 같은 직관적인 함수만 호출해서 데이터를
+    깔끔하게 받아옴
+3. 데이터 수집기(from app.services import collector)
+ - 역할 : 외부 주식 시세 API(키움증권)로 부터 주가 데이터를 긁어와 (Scraping/Crawling)
+    시스템에 적재하는 비즈니스로직을 담당.
+ - 코드 내 사용성 : 대량의 과거 데이터를 쌓는 백ㅍㄹ 작업(collector.start_backfill())이나
+    하루 한번 실행되는 스케줄러 태스크(collector.run_daily_job())를 제어할 때 호출됨.
+4. 주가예측엔진(from app.services.predictor import predict_future_prices)
+ - 역할 : 특정 종목의 과거 주가 패턴을 분석하여 향후 주가가 어떻게 변할지 계산하는 예측 알고리즘
+    (머신러닝/통계모델)모듈
+ - 코드 내 사용성 : 대시보드API(GET / api/stock/<srtn_cd>)가 호출될 때 최신 주가와 함께 
+    미래 예측치(predict_future_prices(srtncd))를 함께 결합하여 화면에 출력하기 위해 사용.
+5. 기술적지표계산기(from app.services.indicators import recompute_all_indicators)
+ - 역할 : 단순가격(종가, 시가 등)외에 투자 판단에 도움을 주는 수학적 보조지표들을 계산하는 모듈
+ - 코드 내 사용성 : 이전 단계에서 생성했던 테이블 정의를 보면 ma_20(20일이동평균), bollinger_up/down
+    (볼린저밴드)같은 컬럼이 있음. /force-updata를 통해 새로운 주가 데이터가 강제로 들어오면, 
+    지표들도 새 가격에 맞춰 다시 계산해야 하므로 recompute_all_indicators()를 호출해 DB 갱신함.                       
+'''
 from app.config import config
 from app.db import repository
 from app.services import collector
@@ -93,7 +138,10 @@ def get_backfill_status():
 종목대시보드 스냅샷 및 예측데이터조회(GET /api/stock/<srtn_cd>)
 - 가장 최신 주가 저보(스냅샷)를 Pandas DataFrame(df)형태로 DB에서 조회함. 만약 데이터가
     없다면 404 Not Found 에러를 출력함.
-    
+- 데이터가 존재하면, 해당 종목코드의 '미래 주가 예측치'(predict_future_prices)를 계산함.
+- 데이터정체 : pandas의 NaN(결측치)값을 파이썬 표준인(None)으로 치환함.(치환하지 않으면
+    JSON 반환 시 에러기 발생하거나 프론트엔드에서 처리가 곤란해짐)
+- 최신 주가 데이터와 미래 예측 데이터를 하나로 합친(update)최종데이터를 반환         
 '''
 @api_bp.route("/stock/<srtn_cd>")
 def get_stock_dashboard_data(srtn_cd):
@@ -119,7 +167,14 @@ def get_stock_dashboard_data(srtn_cd):
     stock_info["status"] = "ok"
     return jsonify(stock_info)
 
-
+'''
+차트용주가 히스토리조회(GET /api/stock/<srtn_cd>/history)
+- 특정 종목의 과거 주가 목록을 조회하여 차트(캔들차트 등)를 그릴 수 있게 해주는 API
+- 쿼리스트링으로 ?days=30처럼 원하는 일수를 요청할 수 있으며, 주어지지 않으면 기본값으로
+    최근 90일(default=90)데이터를 df.tail(days)로 잘라서 반환함.
+- 마찬가지로 결측치 처리를 거친 후, 프론트엔드가 다루기 가장 좋은 배열형태
+    (orient="records", 즉 [{날짜: ..., 종가: ...}, {...}])로 변환하여 출력     
+'''
 @api_bp.route("/stock/<srtn_cd>/history")
 def get_stock_history(srtn_cd):
     try:
@@ -132,7 +187,16 @@ def get_stock_history(srtn_cd):
     df = df.where(pd.notnull(df), None)
     return jsonify(df.to_dict(orient="records"))
 
-
+'''
+수집강제실행API(/force-update 관련)
+- 스케줄러(매일 특정 시간 실행)에 의해 작동할 데이터 수집 로직을 수동으로 즉시 실행하고
+    싶을 때 호출하는 관리자용 주소.
+- URL 뒤에 종목코드 명시 여부에 따라 다르게 동작함.
+    1. 명시한 경우(/api/force-update/A005930): 해당 종목 하나만 새로 긁어온 뒤, 20일
+        이동 평균선이나 볼린저 밴드 같은 보조지표를 다시 계산(recompute_all_indicators)함.
+    2. 명시하지 않은 경우(/api/force-update): 등록된 전체 관심종목에 대한 일일 수집 태스크
+        (run_daily_job)를 통째로 실행함.          
+'''
 @api_bp.route("/force-update")
 @api_bp.route("/force-update/<srtn_cd>")
 def force_update(srtn_cd=None):

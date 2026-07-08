@@ -2,6 +2,14 @@
 최초 실행 시 필요한 테이블을 자동으로 생성함.
 테이블이 없으면 이후 모든 조회/적재가 조용히 실패하는 문제를 막기 위한 안전장치임.
 """
+'''
+from app.db.pool
+- 프로젝트 내부 패키지 구조에서 app폴더 아래, 데이터베이스(db)관련 설정을 모아둔 폴더 내의 pool.py
+    (혹은 pool/패키지)모듈을 가리킴
+import get_connection
+- 해당 모듈로부터 커넥션 풀을 제어하여 DB 연결 객체를 꺼내오는 함수인 get_connection을 현재
+    스크립트로 가져옴    
+'''
 from app.db.pool import get_connection
 '''
 TB_STOCK_PRICE (시세 데이터 테이블)

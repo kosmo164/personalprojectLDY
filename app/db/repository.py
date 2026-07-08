@@ -2,9 +2,32 @@
 데이터 접근 계층(Repository).
 라우트/서비스 코드가 직접 SQL을 작성하지 않도록, 모든 쿼리를 이 모듈에 모아둠.
 '''
+'''
+- 역할 : HTTP 상태 코드 중 412 Precondition Failed(전체조건실패)를 나타내는 상수를 가져옴
+- 특이사항 : 현재 레포지토리 코드 내에서는 직접 사용되고 있지 않고 향후 특정조건(데이터가 미리
+    존재해야하는 조건 등)검증 실패 시 에러를 던지기 위해 선언해 둔 것    
+'''
 from http.client import PRECONDITION_FAILED
+'''
+- 역할 : 파이썬 프로그램 실행 중 발생하는 프로그램 구조적 경고(Warning)메세지를 제어하는
+    표준 라이브러리.
+- 코드 내 사용성 : 주석에 명시된 것처럼 Pandas가 SQLAlchemy가 아닌 순수 오라클 커넥션을
+    사용할 때 뿜어내는 호환성 경고(UserWaring)를 콘솔창에 출력하지 않고 조용히 무시(ignore)
+    하도록 필터링 설정을 적용하기 위해 가져옴    
+'''
 import warnings
+'''
+- 역할 : 대용량 테이블 데이터를 다루는 데 특화된 파이썬 최고의 데이터 분석 라이브러리
+- 코드 내 사용성 : 오라클DB에 쿼리를 날려 받아온 원시(Raw)주가 데이터를 표 형태의 객체인 DataFrame
+    으로 곧바로 변활할 때 pd.read_sql()함수를 사용함.
+'''
 import pandas as pd
+'''
+- 역할 : 프로젝트 내부 다른 모듈(app/db/pool.py)에서 정의된 커넥션풀(Connection Pool)관리 함수
+- 코드 내 사용성 : 매번 DB에 무겁게 새로 로그인하는 대신 미리 만들어진 연결 통로를 get_connection()
+    으로 빠르게 빌려와 SQL을 실행하고 작업이 끝나면 finally블록을 통해 커넥션을 다시 풀로 반납하는
+    방식으로 시스템 자원을 효율적으로 관리
+'''
 from app.db.pool import get_connection
 
 # pandas가 cx_Oracle 커넥션을 SQLAlchemy가 아니라는 이유로 매번 띄우는 경고.
