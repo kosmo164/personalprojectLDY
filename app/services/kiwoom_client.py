@@ -1,10 +1,14 @@
 """
 키움증권 REST API 클라이언트.
 
-- 앱키/시크릿으로 접근토큰을 발급받아 캐싱하고, 만료 전에만 재발급합니다.
-- 국내주식 일봉차트조회(TR: ka10081)로 종목별 일자별 시세를 가져옵니다.
+- 앱키/시크릿으로 접근토큰을 발급받아 캐싱하고, 만료 전에만 재발급.
+- 국내주식 일봉차트조회(TR: ka10081)로 종목별 일자별 시세를 가져옴.
 """
-
+'''
+- threading : 멀티스레드 환경에서 안전하게 토큰을 관리하기 위해 가져옴. 동시 요청이 들어올때 
+    여러 스레드가 동시에 토큰을 재발급받으려고 충돌하는 것을 반지하는 락(Lock)장치에 쓰임
+- time/datetime : 토큰 만료 시간    
+'''
 import os
 import sys
 import threading
@@ -46,12 +50,12 @@ class KiwoomClient:
     def _issue_token(self):
         if not self.app_key or not self.app_secret:
             raise KiwoomAuthError(
-                "KIWOOM_APP_KEY / KIWOOM_APP_SECRET이 설정되지 않았습니다. .env를 확인해주세요."
+                "KIWOOM_APP_KEY / KIWOOM_APP_SECRET이 설정되지 않았습니다. .env를 확인 합니다."
             )
 
         url = f"{self.base_url}{_TOKEN_ENDPOINT}"
 
-        # 💡 [수정]: 키움증권 au10001 공식 명세인 'secretkey'로 다시 변경합니다.
+        # 💡 [수정]: 키움증권 au10001 공식 명세인 'secretkey'로 다시 변경.
         payload = {
             "grant_type": "client_credentials",
             "appkey": self.app_key,
