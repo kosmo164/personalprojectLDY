@@ -33,7 +33,7 @@ from flask import Blueprint, jsonify, request
 3. 데이터 수집기(from app.services import collector)
  - 역할 : 외부 주식 시세 API(키움증권)로 부터 주가 데이터를 긁어와 (Scraping/Crawling)
     시스템에 적재하는 비즈니스로직을 담당.
- - 코드 내 사용성 : 대량의 과거 데이터를 쌓는 백ㅍㄹ 작업(collector.start_backfill())이나
+ - 코드 내 사용성 : 대량의 과거 데이터를 쌓는 백필 작업(collector.start_backfill())이나
     하루 한번 실행되는 스케줄러 태스크(collector.run_daily_job())를 제어할 때 호출됨.
 4. 주가예측엔진(from app.services.predictor import predict_future_prices)
  - 역할 : 특정 종목의 과거 주가 패턴을 분석하여 향후 주가가 어떻게 변할지 계산하는 예측 알고리즘
