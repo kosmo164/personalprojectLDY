@@ -2,6 +2,7 @@
 데이터 접근 계층(Repository).
 라우트/서비스 코드가 직접 SQL을 작성하지 않도록, 모든 쿼리를 이 모듈에 모아둠.
 '''
+from http.client import PRECONDITION_FAILED
 import warnings
 import pandas as pd
 from app.db.pool import get_connection
@@ -154,14 +155,22 @@ def recompute_all_indicators():
     conn = get_connection()
     try:
         cursor = conn.cursor()
+        '''
+        PARTITION BY srtn_cd : 여러 종목이 섞여 있는 전체 테이블에서 종목별로 데이터를 그룹핑함.
+        (주식끼리 데이터가 꼬이지 않게 처리)
+        ROWS BETWEEN 19 PRECEDING AND CURRENT ROW : 앞의 19일과 현재 1일을 합쳐 총 20일의 데이터
+        범위를 뜻함. 주식시장이 열리는 알을 기준으로 완벽히 움직이는 윈도우 범위
+                    
+        이를 통해 20일 이동평균선(ma_20)과 표준편차(std_20)를 구하고, 하단에서 볼린저 밴드 공식인 $ma_20\
+        pm(std_20\times2)$를 조립하여 tb_stock_price 테이블에 일괄 업데이트 함.
+                    
+        데이터가 부족한 상위1~19일 차 데이터는 조건절(s.cnt_20 = 20)을 통해 안전하게 계산에서 제외(null유지)시킴.    
+        '''
         cursor.execute('''
             MERGE INTO tb_stock_price t
             USING (
                 SELECT
                     srtn_cd, bas_dt,
-                    '''
-                    
-                    '''
                     AVG(clpr)    OVER (PARTITION BY srtn_cd ORDER BY bas_dt
                                         ROWS BETWEEN 19 PRECEDING AND CURRENT ROW) AS ma_20,
                     STDDEV(clpr) OVER (PARTITION BY srtn_cd ORDER BY bas_dt
@@ -190,6 +199,13 @@ def recompute_all_indicators():
 def get_latest_snapshot(srtn_cd: str) -> pd.DataFrame:
     conn = get_connection()
     try:
+        '''
+        ROW_NUMBER() OVER (...) : 기계학습(머신러닝)이나 수학적 선형 회귀 분석(Linear Regression)을 돌리려면 
+        X축(독립 변수)역할로 쓸 연속된 숫자 시간축이 필요함.
+        
+        주식시장은 주말이나 공휴일에 쉬기 때문에 날짜 데이터를 타임스탬프로 쓰면 공백이 생겨 수학 계산이 틀어짐.
+        날짜가 오래된 순서대로 정렬하여 1, 2, 3, 4...형태로 순차적인 주식 영업일 인덱스(day_seq)를 임의로 부여함
+        '''
         query = '''
             SELECT * FROM (
                 SELECT srtn_cd, itms_nm, TO_CHAR(bas_dt, 'YYYY-MM-DD') as bas_dt,
