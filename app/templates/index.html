@@ -4,11 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>personalprojectLDY · 주가 예측 대시보드</title>
+    <!-- 
+    1. flask문법({{ url_for }}) : 파이썬 Flask백엔드가 이 파일을 사용자에게 보여줄때, 프로젝트내
+        static/css/style.css 경로를 서버 환경에 맞는 절대 주소로 알아서 치환해 줌.
+    2. Chart.jsCDN : 복잡한 금융 차트를 웹브라우저에 캔버스 형태로 부드럽게 그려주는 외부 오픈소스
+        그래픽 라이브러리를 가져옴     
+    -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
+    <!-- 
+    1. #toast-wrap : 알림창이 뜰 뼈대 공간. 평소엔 비어있다가 app.js에서 경고나 성공 메시지가 발생하면 
+        이 내부에 동작으로 토스트 상자가 추가됨.
+    2. .ticker-tape & #ticker-track : 관심 종목 주가가 무한히 흘러갈 전광판 영역임. app.js가 완선된
+        <span>태그 뭉치를 이 #ticker-track 내부에 주입(Injection)함.     
+    -->
     <div id="toast-wrap"></div>
 
     <!-- 시그니처 요소: 상단 티커 테이프 -->
@@ -17,6 +29,12 @@
     </div>
 
     <div class="wrap">
+        <!--
+        1. 대시보드타이틀 : "AI기반 3, 6, 12개월 주가 예측"이라는 문구 옆에 실시간 깜빡이 효과음 태그
+            (<span class="live-dot">)가 들어감
+        2. 검색바컨트롤 : 기본값으로 삼성전자(005930)코드가 입력되어 있으며, 우측'조회'버튼을 누르면
+            자바스크립트의 liadStckData() 함수가 즉시 발동    
+        -->
         <header class="masthead">
             <div>
                 <div class="brand-eyebrow"><span class="live-dot"></span> AI 기반 3·6·12개월 주가 예측</div>
@@ -28,9 +46,29 @@
             </div>
         </header>
 
+        <!--
+        상단과 그리드 사이에 배치되어 있으며, 서버에서 받아온 관심 좀목 리스트들이 둥근 칩버튼 형태로 이자리에
+        정렬
+        -->
         <div id="quick-picks"></div>
 
         <div class="grid">
+            <!--
+            왼쪽 사이드바 컬럼(.col-stack)
+            css에서 정의한 대로, 화면이 넓어지면 340px 너비로 왼쪽에 층층이 쌓이는 카드 스택 영역
+
+            1. 핵심수치카드(종목분석핵심지표)
+            - 종가, 2일 이평선, 볼린저 상항/하한 데이터가 바인딩될 공간
+            - id="current-price", id="ma-status" 등 고유한 id가 박혀있어, app.js가 데이터를 가져왔을 때
+                정확히 해당 위치의 - 원 텍스트를 72,300원 처럼 실시간 포맷팅된 데이터로 갈아끼우게 됨 
+            2. 스케쥴러 안내카드(주기적 예측 업데이트)
+            - 시스템이 멈춘게 아니라 매일 장 마감 후 자동으로 갱신되고 있음을 명시하는 정적 안내판임. 하단에
+                id="base-date"가 있어 백엔드가 알려준 주가 데이터의 실질적인 기준일(예:2026-07-09)을 표기
+            3. 대량 수집 컨트롤 카드(초기 데이터 적재)
+            - "적재 시작"버튼(id="backfill-btn")을 누르면 startBackfill() 함수가 트리거됨.
+            - 평소에는 숨겨져 있다가(hidden), 적재가 시작되면 자바스크립트에 의해 hidden 클래스가 제거되면서 
+                하단의 프로그레스 바(수집률 트랙)가 스르륵 튀어나오며 몇 % 진행 중인지 채워지게 됨           
+            -->
             <div class="col-stack">
                 <div class="card">
                     <h3>종목 분석 핵심 지표</h3>
@@ -83,6 +121,15 @@
                     </div>
                 </div>
 
+                <!--
+                오른쪽 메인 대시보드 컬럼(.chart-card)
+                -사용자가 가장 집중해서 보게 되는 대시보드의 메인 시각화 화면
+                1. 차트스페이스 : <canvas id="stockChart"></canvas>태그가 존재하며, Chart.js라이브러리가
+                    이 캔버스 객체를 조준해 90일 치의 이편선과 불린저 밴드 라인을 랜더링
+                2. 데이터 부재 레이어(#empty-state) : 만약 백엔드에서 no_date 응답을 보내오면 자바스크립트가
+                    차트 캔버스를 가리고 이 #empty-state레이어의 hidden을 해제함. 그러면 중앙에 "아직 이 종목의 
+                    데이터가 업습니다"라는 문구와 함께 적재를 유도하는 황동색 버튼이 나타남    
+                -->
                 <div class="chart-canvas-wrap">
                     <canvas id="stockChart"></canvas>
                     <div id="empty-state" class="hidden">
@@ -93,6 +140,11 @@
                     </div>
                 </div>
 
+                <!--
+                머신러닝 예측 뷰 : 맨 아래단에는 선형 회귀 모듈이 도출한 3, 6, 12개월 뒤의 미래 예측 등락률이 
+                    삼등분되어 가로로 배치됨. 수치 결과에 따라 자바스크립트가 gain(초록)또는 loss(빨강)클래스
+                    를 동적으로 부여해 글자 색상이 결정됨
+                -->
                 <div class="predictions-row">
                     <div class="prediction-cell">
                         <div class="p-label">3개월 뒤 예측</div>
@@ -111,6 +163,11 @@
         </div>
     </div>
 
+    <!--
+    문서 푸터 및 자바스크립트 로드(<body>하단)
+    성능최적화 : 화면 스타일과 뼈대(DOM)를 브라우저가 ㅁ너저 빠르게 다 그린 다음에 무거운 비동기 통신 로직(app.js)
+        이 실행되도록, 가장 이상적인 위치인 </body> 바로 직전에 자바스크립트 로드 구문을 배치함.
+    -->
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>

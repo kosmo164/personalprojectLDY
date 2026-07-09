@@ -4,6 +4,23 @@
    잉크빛 배경 + 황동(brass) 악센트 + 세리프 디스플레이 + 모노스페이스 데이터
    ========================================================= */
 
+/* 
+전역 설정 및 디자인 가이드라인(:root)
+- 프로젝트에서 반복해서 사용할 테마 색상과 폰트 규격(디자인 시스템)을 한 곳에 모아 선언한 핵심부
+1. 구글웹폰트 가져오기(@import) : 세가지 특성의 폰트를 가져옴
+- Fraunces : 고급스러운 영문 세리프(명조)폰트를 가져옴
+- Inter : 가독성이 높은 현대적인 본문용 폰트
+- IBM Plex Mono : 고정폭(Monospace)폰트로 숫자가 정렬되어야 하는 주가 데이터용
+
+2. 색상 팔레트 변수
+- --ink(#0f1115)&--surface(#181b21) : 완전한 검은색이 아닌, 깊은 잉크빛의 어두운 청회색 톤으로 
+    메인 배경과 카드 배경을 형성
+- --brass(#c8a557) : 대시보드의 시그니처인 황동(놋쇠)색으로, 중요한 텍스트나 버튼에 포인트를 줌
+- --ivory(#eae6da) : 눈의 피로를 덜어주는 상아색(아이보리)을 기본 글자색으로 사용
+- --gain(#5fa876)& --loss(#c1584a) : 주식의 상승(초록)과 하락(빨강)을 표현하되, 전체 톤앤매너에
+    맞춰 채도를 낮춤    
+*/
+
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 :root {
@@ -77,6 +94,16 @@ body {
 .ticker-tape::before { left: 0; background: linear-gradient(90deg, var(--surface), transparent); }
 .ticker-tape::after { right: 0; background: linear-gradient(-90deg, var(--surface), transparent); }
 
+/* 
+시그니처요소 : 무한 롤링 전광판(.ticker-tape)
+-MTS나 뉴스 하단에 추가가 끊임없이 흘러가는 전광판(티커 테이프)을 구현
+1. .ticker-tape::before / ::after : 전광판의 좌측과 우측 가장자리에 linear-gradient 투명 그라데이션을 깔아둠. 
+    흘러가는 주가 글자들이 양끝에서 끊기지 낳고 자연스럽게 스며들고 사라지고 나타나는 시각 효과를 줌
+2. 무한 애니메이션(tickerScroll) : 32초 동안 왼쪽으로 끊임없이 흐르는 애니메이션을 적용. 숫자가 찌그러지지 않도록
+    고정폭 폰트(--font-mono)를 부여했고, tk-up과 tk-down클래스로 상승/하락 색상을 다르게 지정
+3. 사용자배려(@media (prefers-redused-motion)) : 사용자가 운영체제 설정에서 "애니메이션 줄이기"를 켰다면 전광판 
+    스크롤을 멈춰서 어지러움을 방지하는 디테일한 접근성까지 고려됨       
+*/
 .ticker-track {
     display: inline-flex;
     gap: 2.5rem;
@@ -101,6 +128,19 @@ body {
 /* ---------------------------------------------------------
    헤더
 --------------------------------------------------------- */
+/* 
+마스트헤드와 컨트롤 요소(상단헤더&버튼)
+- 사용자가 종목을 검색하고 조작하는 상단바 스타일
+1. header.masthead : 플랙스 박스(flex)를 활용해 로고 영역은 왼쪽, 검색창과 버튼은 오른쪽 아래 정렬
+    (align-item: flex-end)되도록 배치
+2. 실시간깜빡이점(.live-dot) : 키움API연동이나 실시간 상태를 암시하기 위해 초록색 점이 @keyframes pulseDot
+    애니메이션을 통해 2.2초 주기로 은은하게 커지며 깜빡이도록 연출함
+3. 폰트 믹스 매치 : h1.brand-title에서 기본 폰트 사이에 강조하고 싶은 글자(em)에만 이탤릭체와 황동색을 부여해
+    클래식한 영문 잡지 타이틀 같은 느낌을 줌
+4. 입력창(input#search-code) : 종목코드를 입력하는 창으로, 글자 너비가 일정한 고정폭 폰트를 부여해 코드 입력
+    가독성을 높임. 마우스를 클릭(:focus)하면 테두리가 황동색 계열(--hairline-strong)로 부드럽게 강조
+
+*/
 header.masthead {
     display: flex;
     flex-wrap: wrap;
@@ -223,6 +263,16 @@ input#search-code:focus {
 /* ---------------------------------------------------------
    그리드 레이아웃
 --------------------------------------------------------- */
+/* 
+컴포넌트 구조(그리드, 카드, 메트릭)
+1. 반응형 그리드 레이아웃 : 태블릿이나 PC화면(폭1024px이상)으로 넓어지면, 왼쪽 사이드바 영역(340px고정)
+    과 오른쪽 메인 차트 영역(나머지 전체 비율 1fr)으로 깔끔하게 정렬되는 2단 대시보드 레이아웃으로 자동
+    변환
+2. 부드러운 카드 등장효과(fadeInUp) : 대시보드가 로딩될때 모든카드(.card)가 밑에서 위로 8px정도 살짝
+    떠오르며 투명도가 스르륵 걷히는 모션효과(cubic-bezier)가 적용
+3. 수치행렬(.metric-row) : 종가, 대비, 등락률 같은 수치 데이터들을 깔끔하게 좌우 정렬
+    (justify-content: space-between)하고 폰트 베이스라인을 맞춰 정돈        
+*/
 .grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -380,6 +430,15 @@ select#backfill-days {
 #empty-state p.title { color: var(--ivory); font-weight: 600; margin: 0 0 0.3rem; }
 #empty-state p.sub { color: var(--muted); font-size: 0.85rem; margin: 0 0 1.1rem; max-width: 320px; }
 
+/* 
+메인차트와 미래예측 결과뷰(.chart-card)
+1. 차트영역(.chart-canvas-wrap) : 차트가 그려질 캔버스 부모상자. 흑색배경(--ink)과 라운딩 처리가 됨. 
+    데이터가 없을때는 중심에 배치된 #empty-state가 나타나 황동색 글리프 기호와 안내문구를 중앙 정렬로 
+    띄움.
+2. 3단 예측결과구조 : 이전 백엔드 코드에서 연산했던 3개월, 6개월, 12개월 뒤의 예측데이터를 가로로
+    삼등분(repeat(3, 1fr))하여 레이아웃을 쪼갬. 퍼센트 수칙 플러스면 초록색(gain), 마이너스면 빨간색(loss)
+    으로 강조처리    
+*/
 .predictions-row {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -411,6 +470,16 @@ select#backfill-days {
 /* ---------------------------------------------------------
    스켈레톤 로딩
 --------------------------------------------------------- */
+/* 
+고급효과(스켈레톤로딩 및 실시간토스트알림)
+1. 스켈레톤로딩(.skeleton) : 데이터를 비동기(백필 등)로 불러올때 빈 화면 대신 깜빡이는 가짜 구조를 
+    보여주는 기법. 은은한 상아색 빛줄기가 왼쪽에서 오른쪽으로 무한히 흘러가는 그라데이션 애니메이션
+    (shimmer)이 들어감
+2. 실시간토스트알림(#toast-wrap) : 화면 우측 상단에 고정(position: fixed)되어 시스템메시지를 띄워줌
+    뒷배경이 유리를 쿠과하듯 은은하게 비치는 효과(backdrop-filter: blur(6px))가 적용되어 있어, 마치
+    최신 OS의 알림창 같은 효과를 더함. 정보(info), 성공(success), 에러(error)테마별로 테두리와 배경색
+    이 알맞게 매칭됨.    
+*/
 @keyframes shimmer {
     0% { background-position: -200% 0; }
     100% { background-position: 200% 0; }
