@@ -1,0 +1,83 @@
+CREATE TABLE tb_stock_price (
+    srtn_cd       VARCHAR2(20),          
+    1isin_cd       VARCHAR2(20),          
+    itms_nm       VARCHAR2(100) NOT NULL, 
+    bas_dt        DATE NOT NULL,          
+    clpr          NUMBER,                
+    vs            NUMBER,                
+    flt_rt        NUMBER,               
+    mkp           NUMBER,                
+    hipr          NUMBER,                
+    lopr          NUMBER,                
+    trqu          NUMBER,                
+    tr_at         NUMBER,                
+    1mrkt_tot_amt  NUMBER,                
+    1per           NUMBER,                
+    ma_20         NUMBER,                
+    bollinger_up  NUMBER,                
+    bollinger_down NUMBER,               
+    CONSTRAINT pk_stock_price PRIMARY KEY (srtn_cd, bas_dt)
+
+
+1. 종목 및 기준 정보 (기본 식별자)
+
+srtn_cd VARCHAR2(20) (단축코드)
+의미: 주식 시장에서 종목을 구분하는 단축 종목코드. (예: 삼성전자는 005930)
+
+isin_cd VARCHAR2(20) (국제표준코드)
+의미: 전 세계 금융시장에서 통용되는 12자리의 국제표준 증권코드(ISIN). (예: 삼성전자는 KR7005930003)
+
+itms_nm VARCHAR2(100) NOT NULL (종목명)
+의미: 주식의 이름(종목명). (예: 삼성전자, 카카오) 값이 비어있을 수 없음(NOT NULL).
+
+bas_dt DATE NOT NULL (기준일자)
+의미: 해당 주가 데이터가 기록된 거래 기준 날짜
+
+
+2. 일별 시세 데이터 (가격 및 거래량)
+이 컬럼들은 MTS나 HTS 캔들 차트에서 매일 확인하는 핵심 가격 정보. 모두 숫자 타입(NUMBER)으로 지정되어 있음
+
+clpr (종가, Closing Price)
+의미: 당일 주식 시장이 마감될 때의 최종 가격. 투자 수익률을 계산할 때 기준이 되는 가장 중요한 값
+
+vs (대비, Versus)
+의미: 전일 종가 대비 오늘 얼마나 오르고 내렸는지를 나타내는 절대적인 금액 변동 폭 (예: 전날보다 500원 올랐다면 500, 300원 내렸다면 -300)
+
+flt_rt (등락률, Fluctuation Rate)
+의미: 전일 종가 대비 당일 종가의 상승/하락 비율(%)입니다. (예: 1.5는 +1.5%, -2.3은 -2.3% 의미)
+
+mkp (시가, Market Price)
+의미: 당일 아침 9시 시장이 시작할 때 처음 형성된 가격
+
+hipr (고가, High Price)
+의미: 장중에 주가가 가장 높이 올라갔을 때의 최고 가격
+
+lopr (저가, Low Price)
+의미: 장중에 주가가 가장 아래로 떨어졌을 때의 최저 가격
+
+trqu (거래량, Trading Quantity)
+의미: 당일 하루 동안 사고판 주식의 총 개수(수량)
+
+tr_at (거래대금, Trading Amount)
+의미: 당일 총 거래된 주식의 금액 합계(거래량 × 주가)입니다. 시장의 관심도를 반영
+
+
+3. 기업 가치 및 규모 지표
+
+mrkt_tot_amt (시가총액, Market Capitalization)
+의미: 회사의 총 덩치(규모)를 나타내는 시가총액. 당일 종가 × 발행 주식 총수로 계산되며, 기업의 전체 가치를 뜻함
+
+per (주가수익비율, Price Earnings Ratio)
+의미: 대표적인 가치평가 지표인 PER. 주가 ÷ 주당순이익(EPS)으로 계산되며, 이 회사가 버는 돈에 비해 주가가 얼마나 고평가 혹은 저평가되어 있는지 나타냄
+
+4. 기술적 분석 지표 (보조 지표)
+이전 코드에서 오라클 윈도우 함수를 통해 계산되어 업데이트되던 수학적 데이터. 주가의 추세와 변동성을 분석할 때 쓰임
+
+ma_20 (20일 이동평균선, Moving Average 20)
+의미: 최근 20일 동안의 종가를 모두 더해 평균을 낸 값. 한 달간의 평균 가격 흐름(추세선)을 보여줌
+
+bollinger_up (볼린저 밴드 상단선)
+의미: 20일 이동평균선에 표준편차의 2배를 더한 값($ma\_20 + 2\sigma$). 주가가 통계적으로 가파르게 상승했을 때 닿는 일종의 '저항선' 역할
+
+bollinger_down (볼린저 밴드 하단선)
+의미: 20일 이동평균선에 표준편차의 2배를 뺀 값($ma\_20 - 2\sigma$). 주가가 단기적으로 과하게 하락했을 때 닿는 '지지선' 역할
